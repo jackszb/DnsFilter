@@ -71,6 +71,8 @@ jobs:
 
       - name: Commit and push
         run: |
+          set -e
+
           git config user.name "GitHub Actions"
           git config user.email "github-actions@github.com"
 
@@ -79,3 +81,4 @@ jobs:
           if ! git diff --cached --quiet; then
             git commit -m "Update DnsFilter"
             git push
+          fi
