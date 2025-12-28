@@ -49,7 +49,24 @@ jobs:
 
       - name: Generate domain_regex JSON
         run: |
-          python3 .github/scripts/generate_domain_regex.py
+          python3 - << 'EOF'
+          import json
+
+          wildcard_file = 'wildcard.txt'
+          domain_regex_list = []
+
+          with open(wildcard_file, 'r') as f:
+              for line in f:
+                  line = line.strip()
+                  if not line: 
+                      continue
+                  # 将 '*' 转换为正则
+                  regex = '^' + line.replace('.', r'\.').replace('*', r'[^.]+') + '$'
+                  domain_regex_list.append(regex)
+
+          with open('domain_regex.json', 'w') as f:
+              json.dump({'domain_regex': domain_regex_list}, f, indent=2)
+          EOF
 
       - name: Generate DnsFilter.json
         run: |
