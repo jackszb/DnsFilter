@@ -36,7 +36,7 @@ jobs:
             | sed 's/\^.*$//' \
             | sort -u > all_domains.txt
 
-          # 过滤 IPv4/类似 IP 的规则
+          # 过滤 IPv4 / 异常规则
           grep -vE '^([0-9]{1,3}\.){1,4}([0-9]{1,3})?$' all_domains.txt > filtered_domains.txt
           grep -vE '^([0-9]{1,3}\.){1,3}[0-9]{1,3}(\.\*)?(\.gif)?$' filtered_domains.txt \
             | grep -vE '([^.]\.\.)' > cleaned_domains.txt
@@ -51,10 +51,16 @@ jobs:
         run: |
           python3 .github/scripts/generate_domain_regex.py
 
+      - name: Merge suffix rules
+        run: |
+          cat suffix.txt suffix_from_wildcard.txt \
+            | sort -u \
+            | sed '/^$/d' > suffix_merged.txt
+
       - name: Generate DnsFilter.json
         run: |
           jq -n \
-            --rawfile suffix suffix.txt \
+            --rawfile suffix suffix_merged.txt \
             --slurpfile regex domain_regex.json \
             '{
               version: 3,
