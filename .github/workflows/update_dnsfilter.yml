@@ -2,7 +2,7 @@ name: Update DnsFilter
 
 on:
   schedule:
-    - cron: "0 0 * * *"  # 每天 00:00 UTC 自动更新
+    - cron: "0 0 * * *"
   workflow_dispatch:
 
 permissions:
@@ -24,46 +24,23 @@ jobs:
             https://raw.githubusercontent.com/AdguardTeam/HostlistsRegistry/main/filters/general/filter_1_DnsFilter/filter.txt \
             -o DnsFilter.txt
 
-      - name: Extract domains
+      - name: Extract and Generate domain_regex JSON
         run: |
           set -e
-
-          # 提取有效 AdGuard 域名规则
-          grep '^||' DnsFilter.txt \
-            | grep -v '^@@' \
-            | grep -v '^/' \
-            | sed 's/^||//' \
-            | sed 's/\^.*$//' \
-            | sort -u > all_domains.txt
-
-          # 过滤 IPv4/类似 IP 的规则
-          grep -vE '^([0-9]{1,3}\.){1,4}([0-9]{1,3})?$' all_domains.txt > filtered_domains.txt
-          grep -vE '^([0-9]{1,3}\.){1,3}[0-9]{1,3}(\.\*)?(\.gif)?$' filtered_domains.txt \
-            | grep -vE '([^.]\.\.)' > cleaned_domains.txt
-
-          # 不含 * → suffix
-          grep -v '\*' cleaned_domains.txt > suffix.txt || true
-
-          # 含 * → wildcard
-          grep '\*' cleaned_domains.txt > wildcard.txt || true
-
-      - name: Generate domain_regex JSON
-        run: |
+          grep '^||' DnsFilter.txt | grep -vE '^(@@|^/)' | sed 's/^||//' | sed 's/\^.*$//' \
+            | grep -vE '^([0-9]{1,3}\.){1,4}([0-9]{1,3})?$' \
+            | grep -vE '^([0-9]{1,3}\.){1,3}[0-9]{1,3}(\.\*)?(\.gif)?$' \
+            | grep -vE '([^.]\.\.)' | sort -u | \
+            tee >(grep '\*' > wildcard.txt) >(grep -v '\*' > suffix.txt) 
           python3 - << 'EOF'
           import json
-
-          wildcard_file = 'wildcard.txt'
           domain_regex_list = []
-
-          with open(wildcard_file, 'r') as f:
+          with open('wildcard.txt', 'r') as f:
               for line in f:
                   line = line.strip()
-                  if not line: 
-                      continue
-                  # 将 '*' 转换为正则
-                  regex = '^' + line.replace('.', r'\.').replace('*', r'[^.]+') + '$'
-                  domain_regex_list.append(regex)
-
+                  if line:
+                      regex = '^' + line.replace('.', r'\.').replace('*', r'[^.]+') + '$'
+                      domain_regex_list.append(regex)
           with open('domain_regex.json', 'w') as f:
               json.dump({'domain_regex': domain_regex_list}, f, indent=2)
           EOF
@@ -89,12 +66,9 @@ jobs:
       - name: Commit and push
         run: |
           set -e
-
           git config user.name "GitHub Actions"
           git config user.email "github-actions@github.com"
-
           git add DnsFilter.json DnsFilter.srs
-
           if ! git diff --cached --quiet; then
             git commit -m "Update DnsFilter"
             git push
