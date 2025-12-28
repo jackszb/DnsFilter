@@ -2,33 +2,84 @@
 import re
 import json
 
-with open("wildcard.txt", encoding="utf-8") as f:
-    lines = [line.strip() for line in f if line.strip()]
+WILDCARD_FILE = "wildcard.txt"
+REGEX_OUT = "domain_regex.json"
+SUFFIX_OUT = "suffix_from_wildcard.txt"
 
-regex_list = []
+regex_rules = []
+suffix_rules = set()
 
-for dom in sorted(set(lines)):
-    # 先按 * 拆分，逐段处理
-    parts = dom.split("*")
-    escaped_parts = [re.escape(p) for p in parts]
+def is_valid_domain(dom: str) -> bool:
+    if dom.endswith("."):
+        return False
+    if ".." in dom:
+        return False
+    return True
 
-    # 用 DNS 语义的“单 label 通配”
-    # * → [^.]+
-    pattern = "[^.]+".join(escaped_parts)
+def is_tld_wildcard(dom: str) -> bool:
+    # amazon.* / example.* / foo.bar.*
+    return dom.count(".") <= 1
 
-    # 如果原始规则以 * 开头，允许多级前缀
-    if dom.startswith("*"):
-        pattern = r"(?:[^.]+\.)*" + pattern.lstrip(r"\.")
+with open(WILDCARD_FILE, encoding="utf-8") as f:
+    domains = sorted(set(line.strip() for line in f if line.strip()))
 
-    # 如果原始规则以 * 结尾，允许尾部子域
-    if dom.endswith("*"):
-        pattern = pattern.rstrip(r"\.") + r"(?:\.[^.]+)*"
+for dom in domains:
+    if not is_valid_domain(dom):
+        continue
 
-    regex_list.append(f"^{pattern}$")
+    if dom.count("*") == 0:
+        continue
 
-output = {"domain_regex": regex_list}
+    # 丢弃多 * 规则（危险 + 复杂）
+    if dom.count("*") > 1:
+        continue
 
-with open("domain_regex.json", "w", encoding="utf-8") as out:
-    json.dump(output, out, indent=2, ensure_ascii=False)
+    labels = dom.split(".")
 
-print(f"Generated {len(regex_list)} regex rules")
+    # *.example.com → suffix
+    if labels[0] == "*":
+        suffix_rules.add(".".join(labels[1:]))
+        continue
+
+    # TLD 泛化 → 丢弃
+    if is_tld_wildcard(dom):
+        continue
+
+    label_with_star = [l for l in labels if "*" in l]
+
+    # * 单独作为 label（如 a.*.b.com）→ 丢弃
+    if any(l == "*" for l in label_with_star):
+        continue
+
+    # 只允许 1 个 label 含 *
+    if len(label_with_star) != 1:
+        continue
+
+    # 构造 regex
+    regex_labels = []
+    for l in labels:
+        if "*" in l:
+            escaped = re.escape(l).replace(r"\*", "[^.]+")
+            regex_labels.append(escaped)
+        else:
+            regex_labels.append(re.escape(l))
+
+    pattern = "^" + r"\.".join(regex_labels) + "$"
+    regex_rules.append(pattern)
+
+# 输出 regex
+with open(REGEX_OUT, "w", encoding="utf-8") as f:
+    json.dump(
+        {"domain_regex": sorted(set(regex_rules))},
+        f,
+        indent=2,
+        ensure_ascii=False
+    )
+
+# 输出降级 suffix
+with open(SUFFIX_OUT, "w", encoding="utf-8") as f:
+    for s in sorted(suffix_rules):
+        f.write(s + "\n")
+
+print(f"Generated {len(regex_rules)} domain_regex rules")
+print(f"Generated {len(suffix_rules)} suffix rules from wildcard")
