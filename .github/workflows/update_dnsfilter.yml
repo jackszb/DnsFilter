@@ -27,35 +27,27 @@ jobs:
       - name: Extract and Generate domain_regex JSON
         run: |
           set -e
-          grep '^||' DnsFilter.txt | grep -vE '^(@@|^/)' | sed 's/^||//' | sed 's/\^.*$//' \
+          # 合并过滤条件
+          grep '^||' DnsFilter.txt \
+            | grep -vE '(^@@|^/)' \
+            | sed 's/^||//' \
+            | sed 's/\^.*$//' \
             | grep -vE '^([0-9]{1,3}\.){1,4}([0-9]{1,3})?$' \
             | grep -vE '^([0-9]{1,3}\.){1,3}[0-9]{1,3}(\.\*)?(\.gif)?$' \
-            | grep -vE '([^.]\.\.)' | sort -u | \
-            tee >(grep '\*' > wildcard.txt) >(grep -v '\*' > suffix.txt) 
-          python3 - << 'EOF'
-          import json
-          domain_regex_list = []
-          with open('wildcard.txt', 'r') as f:
-              for line in f:
-                  line = line.strip()
-                  if line:
-                      regex = '^' + line.replace('.', r'\.').replace('*', r'[^.]+') + '$'
-                      domain_regex_list.append(regex)
-          with open('domain_regex.json', 'w') as f:
-              json.dump({'domain_regex': domain_regex_list}, f, indent=2)
-          EOF
+            | grep -vE '([^.]\.\.)' \
+            | sort -u \
+            | tee >(grep '\*' > wildcard.txt) >(grep -v '\*' > suffix.txt)
 
-      - name: Generate DnsFilter.json
-        run: |
+          # 生成正则并创建 JSON
           jq -n \
             --rawfile suffix suffix.txt \
-            --slurpfile regex domain_regex.json \
+            --slurpfile wildcard wildcard.txt \
             '{
               version: 3,
               rules: [
                 {
                   domain_suffix: ($suffix | split("\n") | map(select(length > 0))),
-                  domain_regex: $regex[0].domain_regex
+                  domain_regex: ($wildcard | map("^" + .replace(".", r"\.") | .replace("*", r"[^.]+") + "$"))
                 }
               ]
             }' > DnsFilter.json
