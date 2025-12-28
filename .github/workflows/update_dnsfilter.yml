@@ -37,34 +37,19 @@ jobs:
             | sort -u > all_domains.txt
 
           # 过滤 IPv4/类似 IP 的规则
-          grep -vE '^([0-9]{1,3}\.){1,3}[0-9]{1,3}$' all_domains.txt > filtered_domains.txt
-          grep -vE '([^.]\.\.)' filtered_domains.txt > cleaned_domains.txt
+          grep -vE '^([0-9]{1,3}\.){1,4}([0-9]{1,3})?$' all_domains.txt > filtered_domains.txt
+          grep -vE '^([0-9]{1,3}\.){1,3}[0-9]{1,3}(\.\*)?(\.gif)?$' filtered_domains.txt \
+            | grep -vE '([^.]\.\.)' > cleaned_domains.txt
 
-          # 分类别
+          # 不含 * → suffix
           grep -v '\*' cleaned_domains.txt > suffix.txt || true
+
+          # 含 * → wildcard
           grep '\*' cleaned_domains.txt > wildcard.txt || true
 
       - name: Generate domain_regex JSON
         run: |
-          python3 - << 'EOF'
-          import json
-
-          regex_list = []
-
-          # 通配符规则处理
-          with open('wildcard.txt', 'r') as f:
-              for line in f:
-                  line = line.strip()
-                  if not line:
-                      continue
-                  # 转换 * 为 .*
-                  pattern = line.replace('.', r'\.').replace('*', '.*')
-                  regex_list.append(f'^{pattern}$')
-
-          # 生成 JSON
-          with open('domain_regex.json', 'w') as f:
-              json.dump({"domain_regex": sorted(list(set(regex_list)))}, f, indent=2)
-          EOF
+          python3 .github/scripts/generate_domain_regex.py
 
       - name: Generate DnsFilter.json
         run: |
@@ -96,3 +81,4 @@ jobs:
           if ! git diff --cached --quiet; then
             git commit -m "Update DnsFilter"
             git push
+          fi
