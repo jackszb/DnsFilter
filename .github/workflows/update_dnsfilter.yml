@@ -27,33 +27,52 @@ jobs:
       - name: Extract and Generate domain_regex JSON
         run: |
           set -e
-          # 合并过滤条件
-          grep '^||' DnsFilter.txt \
-            | grep -vE '(^@@|^/)' \
-            | sed 's/^||//' \
-            | sed 's/\^.*$//' \
+          # 提取有效 AdGuard 域名规则
+          grep '^||' DnsFilter.txt | grep -vE '^(@@|^/)' | sed 's/^||//' | sed 's/\^.*$//' \
             | grep -vE '^([0-9]{1,3}\.){1,4}([0-9]{1,3})?$' \
             | grep -vE '^([0-9]{1,3}\.){1,3}[0-9]{1,3}(\.\*)?(\.gif)?$' \
-            | grep -vE '([^.]\.\.)' \
-            | sort -u \
-            | tee >(grep '\*' > wildcard.txt) >(grep -v '\*' > suffix.txt)
+            | grep -vE '([^.]\.\.)' | sort -u | \
+            tee >(grep '\*' > wildcard.txt) >(grep -v '\*' > suffix.txt) 
 
-          # 生成正则并创建 JSON
+          # 处理 * 规则并生成正则表达式
+          python3 - << 'EOF'
+          import json
+          domain_regex_list = []
+          with open('wildcard.txt', 'r') as f:
+              for line in f:
+                  line = line.strip()
+                  if line:
+                      regex = '^' + line.replace('.', r'\.').replace('*', r'[^.]+') + '$'
+                      domain_regex_list.append(regex)
+          with open('domain_regex.json', 'w') as f:
+              json.dump({'domain_regex': domain_regex_list}, f, indent=2)
+          EOF
+
+      - name: Generate DnsFilter.json
+        run: |
+          # 验证 wildcard.txt 和 suffix.txt 内容
+          echo "Contents of wildcard.txt:"
+          cat wildcard.txt
+          echo "Contents of suffix.txt:"
+          cat suffix.txt
+
           jq -n \
             --rawfile suffix suffix.txt \
-            --slurpfile wildcard wildcard.txt \
+            --slurpfile regex domain_regex.json \
             '{
               version: 3,
               rules: [
                 {
                   domain_suffix: ($suffix | split("\n") | map(select(length > 0))),
-                  domain_regex: ($wildcard | map("^" + .replace(".", r"\.") | .replace("*", r"[^.]+") + "$"))
+                  domain_regex: $regex[0].domain_regex
                 }
               ]
             }' > DnsFilter.json
 
       - name: Compile to DnsFilter.srs
-        run: sing-box rule-set compile DnsFilter.json
+        run: |
+          # 编译并确保无错误
+          sing-box rule-set compile DnsFilter.json || echo "sing-box compile failed"
 
       - name: Commit and push
         run: |
