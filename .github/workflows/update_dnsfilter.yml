@@ -20,17 +20,12 @@ jobs:
 
       - name: Download DnsFilter list
         run: |
-          curl -fsSL \
-            https://raw.githubusercontent.com/AdguardTeam/HostlistsRegistry/main/filters/general/filter_1_DnsFilter/filter.txt \
-            -o DnsFilter.txt
+          curl -fsSL https://raw.githubusercontent.com/AdguardTeam/HostlistsRegistry/main/filters/general/filter_1_DnsFilter/filter.txt -o DnsFilter.txt
 
       - name: Extract domain_suffix and wildcard rules
         run: |
           set -e
-          grep '^||' DnsFilter.txt \
-            | grep -vE '^(@@|^/)' \
-            | sed 's/^||//' \
-            | sed 's/\^.*$//' \
+          grep '^||' DnsFilter.txt | grep -vE '^(@@|^/)' | sed 's/^||//' | sed 's/\^.*$//' \
             | grep -vE '^([0-9]{1,3}\.){1,4}[0-9]{1,3}$' \
             | grep -vE '([^.]\.\.)' \
             | grep -vE '[/?=&]' \
