@@ -22,7 +22,7 @@ for line in lines:
         domain = re.sub(r'\^.*$', '', domain).strip()
         if not domain:
             continue
-        # 排除纯数字或 IP 开头
+        # 排除纯数字或 IP 开头的域名（仅对 domain_regex 适用）
         if re.match(r'^(\d{1,3}\.){1,3}\d{1,3}$', domain):  # 排除 IP 地址
             continue
         # 排除非法字符和长度问题
@@ -30,10 +30,11 @@ for line in lines:
             continue
         if re.search(r'[^a-zA-Z0-9\-.*]', domain):
             continue
-        if '*' in domain:
-            wildcard.append(domain)
-        else:
+        # 精确域名 (domain_suffix)
+        if '*' not in domain:
             suffix.append(domain)
+        else:
+            wildcard.append(domain)
 
 # 去重排序
 suffix = sorted(set(suffix))
@@ -49,6 +50,10 @@ with open('wildcard.txt', 'w') as f:
 # 使用科学正则，匹配一级及以上子域名（多级也能匹配）
 domain_regex_list = []
 for d in wildcard:
+    # 排除数字开头的域名（仅对 domain_regex 适用）
+    if re.match(r'^\d', d):  # 如果域名以数字开头，跳过
+        continue
+
     # 转换通配符为正则表达式：替换 '*' 为 '[^.]+'
     escaped = re.escape(d).replace(r'\*', r'[^.]+')
 
