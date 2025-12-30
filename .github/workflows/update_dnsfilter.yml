@@ -93,3 +93,4 @@ jobs:
           if ! git diff --cached --quiet; then
             git commit -m "Update DnsFilter"
             git push
+          fi
