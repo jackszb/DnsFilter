@@ -23,11 +23,9 @@ for line in lines:
         if not domain:
             continue
         # 排除纯数字或 IP 开头
-        if re.match(r'^(\d{1,3}\.){1,3}\d{1,3}$', domain):
+        if re.match(r'^(\d{1,3}\.){1,3}\d{1,3}$', domain):  # 排除 IP 地址
             continue
-        if re.match(r'^\d', domain):
-            continue
-        # 排除连续点或非法字符
+        # 排除非法字符和长度问题
         if '..' in domain or domain.startswith('.') or domain.endswith('.') or len(domain) < 3:
             continue
         if re.search(r'[^a-zA-Z0-9\-.*]', domain):
