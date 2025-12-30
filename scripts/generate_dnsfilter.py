@@ -9,40 +9,46 @@ response = requests.get(url)
 response.raise_for_status()
 lines = response.text.splitlines()
 
-# 分离通配符域名和普通后缀
 suffix = []
 wildcard = []
 
+# 提取域名
 for line in lines:
     line = line.strip()
     if line.startswith("||") and not line.startswith("@@") and not line.startswith("/"):
         domain = re.sub(r'^\|\|', '', line)
         domain = re.sub(r'\^.*$', '', domain)
+        domain = domain.strip()
         if not domain:
             continue
-        if re.match(r'^([0-9]{1,3}\.){1,3}[0-9]{1,3}$', domain):
+        # 排除纯数字或 IP 开头
+        if re.match(r'^(\d{1,3}\.){1,3}\d{1,3}$', domain):
+            continue
+        if re.match(r'^\d', domain):
+            continue
+        # 排除连续点或非法字符
+        if '..' in domain or domain.startswith('.') or domain.endswith('.') or len(domain) < 3:
+            continue
+        if re.search(r'[^a-zA-Z0-9\-.*]', domain):
             continue
         if '*' in domain:
             wildcard.append(domain)
         else:
             suffix.append(domain)
 
-# 保存 wildcard.txt 和 suffix.txt
-with open('wildcard.txt', 'w') as f:
-    f.write('\n'.join(sorted(set(wildcard))))
+# 去重排序
+suffix = sorted(set(suffix))
+wildcard = sorted(set(wildcard))
+
+# 保存 txt 文件
 with open('suffix.txt', 'w') as f:
-    f.write('\n'.join(sorted(set(suffix))))
+    f.write('\n'.join(suffix))
+with open('wildcard.txt', 'w') as f:
+    f.write('\n'.join(wildcard))
 
 # 生成 domain_regex.json
-def is_valid_domain(d):
-    if '..' in d or d.startswith('.') or d.endswith('.') or len(d) < 3:
-        return False
-    if re.search(r'[^a-zA-Z0-9\-\*\.]', d):
-        return False
-    return True
-
-domain_regex_list = ['^' + re.escape(d).replace(r'\*', r'[^.]+') + '$' 
-                     for d in wildcard if is_valid_domain(d)]
+domain_regex_list = ['^' + re.escape(d).replace(r'\*', r'[^.]+') + '$'
+                     for d in wildcard]
 domain_regex_list = sorted(set(domain_regex_list))
 
 with open('domain_regex.json', 'w') as f:
@@ -53,7 +59,7 @@ DnsFilter_json = {
     "version": 3,
     "rules": [
         {
-            "domain_suffix": sorted(set(suffix)),
+            "domain_suffix": suffix,
             "domain_regex": domain_regex_list
         }
     ]
