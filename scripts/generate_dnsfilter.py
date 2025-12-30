@@ -51,12 +51,17 @@ with open('wildcard.txt', 'w') as f:
 # 使用科学正则，匹配一级及以上子域名（多级也能匹配）
 domain_regex_list = []
 for d in wildcard:
+    # 转换通配符为正则表达式：替换 '*' 为 '[^.]+'
     escaped = re.escape(d).replace(r'\*', r'[^.]+')
+
     # 自动加上多级匹配：支持 abc.example.com 和 x.y.example.com
-    domain_regex_list.append(r'^([^.]+\.)*' + escaped + r'$')
+    # 比如 "*-datareceiver.aki-game.net" 会变成 "^([^.]+\.)*-datareceiver.aki-game.net$"
+    regex = r'^([^.]+\.)*' + escaped + r'$'
+    domain_regex_list.append(regex)
 
 domain_regex_list = sorted(set(domain_regex_list))
 
+# 保存 domain_regex.json
 with open('domain_regex.json', 'w') as f:
     json.dump({'domain_regex': domain_regex_list}, f, indent=2)
 
@@ -71,6 +76,7 @@ DnsFilter_json = {
     ]
 }
 
+# 保存 DnsFilter.json
 with open('DnsFilter.json', 'w') as f:
     json.dump(DnsFilter_json, f, indent=2)
 
