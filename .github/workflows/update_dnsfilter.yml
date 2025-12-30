@@ -35,35 +35,11 @@ jobs:
 
       - name: Generate domain_regex.json
         run: |
-          python3 -c '
-import json, re
-
-regex_list = []
-
-def valid_wildcard(d):
-    if not d.startswith("*."):
-        return False
-    if d.count("*") != 1:
-        return False
-    suffix = d[2:]
-    if ".." in suffix:
-        return False
-    if not re.fullmatch(r"[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)+", suffix):
-        return False
-    return True
-
-with open("wildcard.txt") as f:
-    for line in f:
-        d = line.strip()
-        if valid_wildcard(d):
-            suffix = d[2:]
-            regex_list.append(r"^[^.]+\." + re.escape(suffix) + r"$")
-
-regex_list = sorted(set(regex_list))
-
-with open("domain_regex.json", "w") as f:
-    json.dump({"domain_regex": regex_list}, f, indent=2)
-'
+          python3 -c "import json,re;out=[];\
+def ok(d):\
+ return d.startswith('*.') and d.count('*')==1 and '..' not in d[2:] and re.fullmatch(r'[a-zA-Z0-9-]+(\\.[a-zA-Z0-9-]+)+',d[2:]);\
+[ out.append(r'^[^.]+\\.'+re.escape(d[2:])+r'$') for d in open('wildcard.txt') if ok(d.strip()) ];\
+json.dump({'domain_regex':sorted(set(out))},open('domain_regex.json','w'),indent=2)"
 
       - name: Generate DnsFilter.json
         run: |
