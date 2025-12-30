@@ -24,7 +24,7 @@ jobs:
             https://raw.githubusercontent.com/AdguardTeam/HostlistsRegistry/main/filters/general/filter_1_DnsFilter/filter.txt \
             -o DnsFilter.txt
 
-      - name: Extract and Generate domain_regex JSON
+      - name: Extract wildcard and suffix
         run: |
           set -e
           grep '^||' DnsFilter.txt | grep -vE '^(@@|^/)' | sed 's/^||//' | sed 's/\^.*$//' \
@@ -33,36 +33,37 @@ jobs:
             | grep -vE '([^.]\.\.)' | sort -u | \
             tee >(grep '\*' > wildcard.txt) >(grep -v '\*' > suffix.txt)
 
-          python3 - <<'EOF'
-import json
-import re
+      - name: Generate domain_regex.json
+        run: |
+          python3 -c '
+import json, re
 
 regex_list = []
 
-def valid_wildcard(domain):
-    if not domain.startswith('*.'):
+def valid_wildcard(d):
+    if not d.startswith("*."):
         return False
-    if domain.count('*') != 1:
+    if d.count("*") != 1:
         return False
-    suffix = domain[2:]
-    if '..' in suffix:
+    suffix = d[2:]
+    if ".." in suffix:
         return False
-    if not re.fullmatch(r'[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)+', suffix):
+    if not re.fullmatch(r"[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)+", suffix):
         return False
     return True
 
-with open('wildcard.txt') as f:
+with open("wildcard.txt") as f:
     for line in f:
         d = line.strip()
         if valid_wildcard(d):
             suffix = d[2:]
-            regex_list.append(r'^[^.]+\.' + re.escape(suffix) + r'$')
+            regex_list.append(r"^[^.]+\." + re.escape(suffix) + r"$")
 
 regex_list = sorted(set(regex_list))
 
-with open('domain_regex.json', 'w') as f:
-    json.dump({'domain_regex': regex_list}, f, indent=2)
-EOF
+with open("domain_regex.json", "w") as f:
+    json.dump({"domain_regex": regex_list}, f, indent=2)
+'
 
       - name: Generate DnsFilter.json
         run: |
@@ -85,7 +86,6 @@ EOF
 
       - name: Commit and push
         run: |
-          set -e
           git config user.name "GitHub Actions"
           git config user.email "github-actions@github.com"
           git add DnsFilter.json DnsFilter.srs
