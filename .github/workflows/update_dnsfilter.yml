@@ -33,18 +33,16 @@ jobs:
             | grep -vE '([^.]\.\.)' | sort -u | \
             tee >(grep '\*' > wildcard.txt) >(grep -v '\*' > suffix.txt)
 
-          python3 - << 'EOF'
+          python3 - <<'EOF'
 import json
 import re
 
 regex_list = []
 
 def valid_wildcard(domain):
-    if not domain.startswith('*'):
+    if not domain.startswith('*.'):
         return False
     if domain.count('*') != 1:
-        return False
-    if not domain.startswith('*.'):
         return False
     suffix = domain[2:]
     if '..' in suffix:
@@ -53,7 +51,7 @@ def valid_wildcard(domain):
         return False
     return True
 
-with open('wildcard.txt', 'r') as f:
+with open('wildcard.txt') as f:
     for line in f:
         d = line.strip()
         if valid_wildcard(d):
