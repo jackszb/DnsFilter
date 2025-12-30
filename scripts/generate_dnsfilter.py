@@ -9,16 +9,17 @@ response = requests.get(url)
 response.raise_for_status()
 lines = response.text.splitlines()
 
-suffix = []
-wildcard = []
+suffix = []   # 精确域名（不含通配符）
+wildcard = [] # 包含通配符的域名
 
 # 提取域名
 for line in lines:
     line = line.strip()
-    if line.startswith("||") and not line.startswith("@@") and not line.startswith("/"):
+    if not line or line.startswith("@@") or line.startswith("/"):
+        continue
+    if line.startswith("||"):
         domain = re.sub(r'^\|\|', '', line)
-        domain = re.sub(r'\^.*$', '', domain)
-        domain = domain.strip()
+        domain = re.sub(r'\^.*$', '', domain).strip()
         if not domain:
             continue
         # 排除纯数字或 IP 开头
@@ -46,23 +47,16 @@ with open('suffix.txt', 'w') as f:
 with open('wildcard.txt', 'w') as f:
     f.write('\n'.join(wildcard))
 
-# 生成 domain_regex.json，确保正则安全
+# 生成 domain_regex.json
+# 使用科学正则，匹配一级及以上子域名（多级也能匹配）
 domain_regex_list = []
 for d in wildcard:
-    # 将 * 转为 [^.]+，确保安全
-    pattern = '^' + re.escape(d).replace(r'\*', r'[^.]+') + '$'
-    # 修复可能的非法组合，如 [^.]+后跟特殊字符
-    pattern = re.sub(r'\[\^.\]\+\.', r'[^.]+.', pattern)
-    # 尝试编译正则，跳过无效正则
-    try:
-        re.compile(pattern)
-        domain_regex_list.append(pattern)
-    except re.error:
-        print(f"跳过无效正则: {pattern}")
+    escaped = re.escape(d).replace(r'\*', r'[^.]+')
+    # 自动加上多级匹配：支持 abc.example.com 和 x.y.example.com
+    domain_regex_list.append(r'^([^.]+\.)*' + escaped + r'$')
 
 domain_regex_list = sorted(set(domain_regex_list))
 
-# 保存 domain_regex.json
 with open('domain_regex.json', 'w') as f:
     json.dump({'domain_regex': domain_regex_list}, f, indent=2)
 
