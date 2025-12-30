@@ -31,7 +31,7 @@ jobs:
             | grep -vE '^([0-9]{1,3}\.){1,4}([0-9]{1,3})?$' \
             | grep -vE '^([0-9]{1,3}\.){1,3}[0-9]{1,3}(\.\*)?(\.gif)?$' \
             | grep -vE '([^.]\.\.)' | sort -u | \
-            tee >(grep '\*' > wildcard.txt) >(grep -v '\*' > suffix.txt) 
+            tee >(grep '\*' > wildcard.txt) >(grep -v '\*' > suffix.txt)
 
           python3 - << 'EOF'
           import json
@@ -39,19 +39,23 @@ jobs:
 
           domain_regex_list = []
 
+          def is_valid_domain(domain):
+              if '..' in domain:
+                  return False
+              if re.search(r'[^a-zA-Z0-9\-\*\.]', domain):
+                  return False
+              if domain.startswith('.') or domain.endswith('.'):
+                  return False
+              if len(domain) < 3:
+                  return False
+              return True
+
           with open('wildcard.txt', 'r') as f:
               for line in f:
-                  d = line.strip()
-                  if not d:
-                      continue
-                  if '..' in d:
-                      continue
-                  if d.startswith('.') or d.endswith('.'):
-                      continue
-                  if re.search(r'[/?:&=]', d):
-                      continue
-                  regex = '^' + re.escape(d).replace(r'\*', r'[^.]+') + '$'
-                  domain_regex_list.append(regex)
+                  line = line.strip()
+                  if line and is_valid_domain(line):
+                      regex = '^' + line.replace('.', r'\.').replace('*', r'[^.]+') + '$'
+                      domain_regex_list.append(regex)
 
           with open('domain_regex.json', 'w') as f:
               json.dump({'domain_regex': domain_regex_list}, f, indent=2)
@@ -83,11 +87,11 @@ jobs:
 
       - name: Commit and push
         run: |
-          set -e
           git config user.name "GitHub Actions"
           git config user.email "github-actions@github.com"
           git add DnsFilter.json DnsFilter.srs
-          if ! git diff --cached --quiet; then
+          if ! git diff --cached --quiet
+          then
             git commit -m "Update DnsFilter"
             git push
           fi
