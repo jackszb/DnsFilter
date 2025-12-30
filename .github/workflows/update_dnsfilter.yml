@@ -3,7 +3,7 @@ name: Update DnsFilter
 on:
   schedule:
     - cron: "0 0 * * *"
-  workflow_dispatch:   # 保留手动触发
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -34,36 +34,36 @@ jobs:
             tee >(grep '\*' > wildcard.txt) >(grep -v '\*' > suffix.txt)
 
           python3 - << 'EOF'
-import json
-import re
+          import json
+          import re
 
-domain_regex_list = []
+          domain_regex_list = []
 
-def is_valid_domain(domain):
-    if not domain:
-        return False
-    if '..' in domain:
-        return False
-    if domain.startswith('.') or domain.endswith('.'):
-        return False
-    if len(domain) < 3:
-        return False
-    if re.search(r'[^a-zA-Z0-9\-\*\.]', domain):
-        return False
-    return True
+          def is_valid_domain(domain):
+              if not domain:
+                  return False
+              if '..' in domain:
+                  return False
+              if domain.startswith('.') or domain.endswith('.'):
+                  return False
+              if len(domain) < 3:
+                  return False
+              if re.search(r'[^a-zA-Z0-9\-\*\.]', domain):
+                  return False
+              return True
 
-with open('wildcard.txt', 'r') as f:
-    for line in f:
-        line = line.strip()
-        if line and is_valid_domain(line):
-            regex = '^' + re.escape(line).replace(r'\*', r'[^.]+') + '$'
-            domain_regex_list.append(regex)
+          with open('wildcard.txt', 'r') as f:
+              for line in f:
+                  line = line.strip()
+                  if line and is_valid_domain(line):
+                      regex = '^' + re.escape(line).replace(r'\*', r'[^.]+') + '$'
+                      domain_regex_list.append(regex)
 
-domain_regex_list = sorted(set(domain_regex_list))
+          domain_regex_list = sorted(set(domain_regex_list))
 
-with open('domain_regex.json', 'w') as f:
-    json.dump({'domain_regex': domain_regex_list}, f, indent=2)
-EOF
+          with open('domain_regex.json', 'w') as f:
+              json.dump({'domain_regex': domain_regex_list}, f, indent=2)
+          EOF
 
       - name: Generate DnsFilter.json
         run: |
