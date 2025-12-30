@@ -46,9 +46,16 @@ with open('suffix.txt', 'w') as f:
 with open('wildcard.txt', 'w') as f:
     f.write('\n'.join(wildcard))
 
-# 生成 domain_regex.json
-domain_regex_list = ['^' + re.escape(d).replace(r'\*', r'[^.]+') + '$'
-                     for d in wildcard]
+# 生成 domain_regex.json 并排除无效正则
+domain_regex_list = []
+for d in wildcard:
+    pattern = '^' + re.escape(d).replace(r'\*', r'[^.]+') + '$'
+    try:
+        re.compile(pattern)  # 检查正则合法性
+        domain_regex_list.append(pattern)
+    except re.error:
+        print(f"跳过无效正则: {pattern}")
+
 domain_regex_list = sorted(set(domain_regex_list))
 
 with open('domain_regex.json', 'w') as f:
