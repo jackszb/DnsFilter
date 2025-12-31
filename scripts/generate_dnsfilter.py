@@ -9,6 +9,15 @@ response = requests.get(url)
 response.raise_for_status()
 lines = response.text.splitlines()
 
+# 需要排除的特殊域名/IP
+exclude_list = [
+    "*.gif",
+    "107.167.*.*",
+    "121.204.246.*",
+    "38.33.15.*",
+    "67.21.92.*"
+]
+
 suffix = []   # 精确域名（不含通配符）
 wildcard = [] # 包含通配符的域名
 
@@ -47,18 +56,16 @@ with open('wildcard.txt', 'w') as f:
     f.write('\n'.join(wildcard))
 
 # 生成 domain_regex.json
-# 使用科学正则，匹配一级及以上子域名（多级也能匹配）
 domain_regex_list = []
 for d in wildcard:
-    # 排除数字开头的域名（仅对 domain_regex 适用）
-    if re.match(r'^\d', d):  # 如果域名以数字开头，跳过
+    # 排除数字开头的域名
+    if re.match(r'^\d', d):
         continue
-
-    # 转换通配符为正则表达式：替换 '*' 为 '[^.]+'
+    # 排除特殊域名/IP
+    if any(d.startswith(e.replace('*', '')) for e in exclude_list):
+        continue
+    # 转换通配符为科学正则表达式
     escaped = re.escape(d).replace(r'\*', r'[^.]+')
-
-    # 自动加上多级匹配：支持 abc.example.com 和 x.y.example.com
-    # 比如 "*-datareceiver.aki-game.net" 会变成 "^([^.]+\.)*-datareceiver.aki-game.net$"
     regex = r'^([^.]+\.)*' + escaped + r'$'
     domain_regex_list.append(regex)
 
