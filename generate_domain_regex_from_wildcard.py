@@ -4,10 +4,10 @@ import json
 def convert_wildcards_to_regex(domain):
     # 将 '*' 替换为 '.*' 以匹配任意字符
     domain = domain.replace("*", ".*")
-    
-    # 修正正则表达式，移除不正确的 '^[^.' 和 \2
+
+    # 修正正则表达式：去掉域名中间的 ^ 和无效的 \2
+    # 匹配域名的结尾部分，确保可以匹配子域名和顶级域名
     domain = re.sub(r"([^.]+)\.([a-z]+)$", r"^\1(\.[^.]+)*\.\2$", domain)
-    domain = re.sub(r"^\*", "^([^.]+\\.)*", domain)
 
     # 确保正则表达式以 ^ 开头，以 $ 结尾
     if not domain.startswith("^"):
