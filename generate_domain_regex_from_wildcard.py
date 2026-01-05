@@ -1,51 +1,50 @@
 import re
 import json
 
-def clean_regex(regex):
-    """
-    清理正则表达式中的冗余部分，如多余的 .*
-    """
-    cleaned = re.sub(r'\.\*+', '.*', regex)  # 合并连续的 .* 为一个
-    return cleaned
-
 def wildcard_to_regex(domain):
     """
-    根据通配符位置将域名转换为正则表达式。
+    将含有通配符 '*' 的域名转换为正则表达式。
+    - 如果通配符在开头，转换为 ^.*domain$
+    - 如果通配符在末尾，转换为 ^domain.*$
+    - 如果通配符在中间，转换为 domain.*domain
     """
-    # 如果通配符出现在域名的开头
     if domain.startswith("*"):
-        domain = ".*" + domain[1:]  # 替换开头的 *
-    
-    # 如果通配符出现在域名的末尾
+        # 通配符在开头
+        domain = "^.*" + domain[1:]  # 替换开头的 *
     elif domain.endswith("*"):
-        domain = domain[:-1] + ".*"  # 替换结尾的 *
-    
-    # 如果通配符出现在域名的中间
+        # 通配符在结尾
+        domain = domain[:-1] + ".*$"  # 替换结尾的 *
     elif "*" in domain:
+        # 通配符在中间
         domain = domain.replace("*", ".*")  # 替换中间的 *
+    
+    # 添加正则表达式的起始和结束标记
+    return domain
 
-    # 对于所有域名，加上 ^ 和 $ 来确保是全匹配
-    return f"^{domain}$"
+def clean_regex(regex):
+    """
+    清理冗余的部分，例如多个 .* 合并为一个。
+    """
+    return re.sub(r'\.\*+', '.*', regex)
 
 def process_wildcard_file(filename):
     """
-    读取 wildcard.txt 文件，将其中的每个通配符域名转换为正则表达式。
+    处理 wildcard.txt 文件，转换其中的域名通配符为正则表达式。
     """
     with open(filename, "r") as file:
         lines = file.readlines()
-        # 对每个域名应用 wildcard_to_regex 转换并清理冗余部分
         wildcard_domains = [clean_regex(wildcard_to_regex(line.strip())) for line in lines if line.strip()]
         return wildcard_domains
 
 def generate_sing_box_rule(wildcard_domains):
     """
-    生成 sing-box 规则文件，包含转换后的域名正则表达式。
+    根据转换后的正则表达式生成 sing-box 规则。
     """
     return {"version": 3, "rules": [{"domain_regex": wildcard_domains}]}
 
 def write_json_to_file(data, filename):
     """
-    将生成的规则数据写入 JSON 文件。
+    将数据写入 JSON 文件。
     """
     with open(filename, "w") as f:
         json.dump(data, f, indent=2)
@@ -63,7 +62,7 @@ def main():
     # 写入 domain_regex.json 文件
     write_json_to_file(rules, output_file)
 
-    # 打印生成的 domain_regex.json 文件内容确认
+    # 打印生成的 domain_regex.json 文件内容
     with open(output_file, "r") as f:
         print(f.read())  # 打印生成的 domain_regex.json 文件内容
 
