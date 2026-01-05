@@ -1,0 +1,47 @@
+name: Update Domain Lists from Adguard
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # 每天自动更新
+  workflow_dispatch:  # 支持手动触发
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Adguard rules
+        run: |
+          curl -o filter.txt https://raw.githubusercontent.com/AdguardTeam/HostlistsRegistry/main/filters/general/filter_1_DnsFilter/filter.txt
+
+      - name: Process Domains
+        run: |
+          # 提取不包含通配符的域名
+          grep -E '^\|\|([a-zA-Z0-9.-]+)\^' filter.txt | sed 's/^\|\|\(.*\)\^/\1/' > suffix.txt
+
+          # 提取包含通配符的域名
+          grep -E '^\|\|\*.*\^' filter.txt | sed 's/^\|\|\*\([a-zA-Z0-9.-]+\)\^/\1/' > wildcard.txt
+
+          # 提取忽略的域名（第一类 IP）
+          grep -E '^\|\|[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\^' filter.txt | sed 's/^\|\|\(.*\)\^/\1/' >> ignore_ips.txt
+
+          # 提取忽略的域名（第二类 IP）
+          grep -E '^\^\/[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+.*' filter.txt >> ignore_ips.txt
+
+          # 提取忽略的域名（第三类 GIF）
+          grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+.*gif$' filter.txt >> ignore_ips.txt
+
+          # 提取忽略的域名（第四类 域名排除）
+          grep -E '^\@\@' filter.txt | sed 's/^\@\@(.*)\^/\1/' >> exclude_domains.txt
+
+      - name: Commit & Push Changes
+        run: |
+          git config --global user.email "github-actions@github.com"
+          git config --global user.name "GitHub Actions"
+
+          git add suffix.txt wildcard.txt exclude_domains.txt
+          git commit -m "Auto update domain lists (suffix.txt and wildcard.txt)" || echo "No changes"
+          git push
