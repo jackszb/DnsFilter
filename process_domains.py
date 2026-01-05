@@ -13,8 +13,8 @@ ignore_patterns = [
     # 第一类：精确 IP 地址
     re.compile(r'^\|\|(\d{1,3}\.){3}\d{1,3}\^'),
     
-    # 第二类：正则表达式形式的 IP 地址（注意处理 /^...$/ 格式）
-    re.compile(r'^\^\/.*\/$'),
+    # 第二类：正则表达式形式的 IP 地址（以 /^ 开头，以 $/ 结尾）
+    re.compile(r'^\/\^.*\^\/$'),
     
     # 第三类：带通配符的 GIF 文件
     re.compile(r'.*\*.*\.gif$'),
@@ -27,7 +27,7 @@ ignore_patterns = [
 for line in lines:
     line = line.strip()
 
-    # 检查每一行是否需要被忽略
+    # 如果匹配任何忽略规则，直接将其添加到 ignored.txt
     if any(pattern.match(line) for pattern in ignore_patterns):
         ignored.append(line)
         continue
