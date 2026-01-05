@@ -16,7 +16,7 @@ ignore_patterns = [
     re.compile(r'^\/\^.*\^\/$'),
     
     # 第三类：带通配符的 GIF 文件
-    re.compile(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\.*gif$'),
+    re.compile(r'.*\*.*\.gif$'),
     
     # 第四类：以 @@ 开头的排除规则
     re.compile(r'^\@\@')
