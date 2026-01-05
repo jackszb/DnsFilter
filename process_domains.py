@@ -40,6 +40,11 @@ for line in lines:
         ignored.append(line)
         continue
     
+    # 第二类：正则表达式规则（匹配 /^.*$/ ）
+    if line.startswith('^/'):
+        ignored.append(line)
+        continue
+    
     # 精确域名（domain_suffix）
     if line.startswith('||'):
         domain = re.sub(r'^\|\|', '', line)
@@ -60,7 +65,10 @@ with open('wildcard.txt', 'w') as f:
     f.write('\n'.join(wildcard))
 
 # 保存忽略的域名/IP 到 ignored.txt
-with open('ignored.txt', 'w') as f:
-    f.write('\n'.join(ignored))
+if ignored:  # 如果忽略列表有内容
+    with open('ignored.txt', 'w') as f:
+        f.write('\n'.join(ignored))
+else:
+    print("No ignored domains/IPs to write.")
 
 print('suffix.txt, wildcard.txt, and ignored.txt generated successfully!')
