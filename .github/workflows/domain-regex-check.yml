@@ -1,0 +1,26 @@
+name: Validate domain_regex
+
+on:
+  push:
+    paths:
+      - domain_regex.json
+      - check_domain_regex.py
+  pull_request:
+    paths:
+      - domain_regex.json
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Validate domain_regex.json
+        run: python check_domain_regex.py
