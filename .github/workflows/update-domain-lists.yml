@@ -33,6 +33,6 @@ jobs:
           git config --global user.email "github-actions@github.com"
           git config --global user.name "GitHub Actions"
 
-          git add suffix.txt wildcard.txt ignore_ips.txt
+          git add suffix.txt wildcard.txt
           git commit -m "Auto update domain lists" || echo "No changes"
           git push
