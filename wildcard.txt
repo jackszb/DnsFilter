@@ -9,11 +9,6 @@
 *launches.appsflyersdk.com
 *register.appsflyersdk.com
 *two-gun-volley.pages.dev
-107.167.16.*.gif
-107.167.22.*.gif
-121.204.246.*.gif
-38.33.15.*.gif
-67.21.92.*.gif
 a*.chajiaotong.com
 a*.smlog.co.kr
 aan.amazon.*
