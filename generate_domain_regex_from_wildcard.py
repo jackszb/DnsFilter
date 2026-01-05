@@ -9,6 +9,7 @@ def clean_regex(regex):
     cleaned = re.sub(r'\.\*+', '.*', regex)
     # 修复类似 'aan.amazon..*$' 为 'aan.amazon.*$'
     cleaned = re.sub(r'\.\*\.', '.*.', cleaned)
+    print(f"Cleaned regex: {cleaned}")  # 调试输出
     return cleaned
 
 def process_wildcard_file(filename):
@@ -18,13 +19,16 @@ def process_wildcard_file(filename):
     with open(filename, "r") as file:
         lines = file.readlines()
         # 对每个域名应用 wildcard_to_regex 转换并清理冗余部分
-        return [clean_regex(wildcard_to_regex(line.strip())) for line in lines if line.strip()]
+        wildcard_domains = [clean_regex(wildcard_to_regex(line.strip())) for line in lines if line.strip()]
+        print(f"Converted domains: {wildcard_domains}")  # 调试输出
+        return wildcard_domains
 
 def wildcard_to_regex(domain):
     """
     将域名中的 '*' 替换为正则表达式中的 '.*'，用于匹配任意字符。
     """
     domain = domain.replace('*', '.*')  # 将 * 替换为 .*
+    print(f"Wildcard to regex: {domain}")  # 调试输出
     return f"^{domain}$"
 
 def generate_sing_box_rule(wildcard_domains):
@@ -39,6 +43,7 @@ def write_json_to_file(data, filename):
     """
     with open(filename, "w") as f:
         json.dump(data, f, indent=2)
+    print(f"JSON written to {filename}")  # 调试输出
 
 def main():
     wildcard_file = "wildcard.txt"  # 输入的 wildcard.txt 文件
