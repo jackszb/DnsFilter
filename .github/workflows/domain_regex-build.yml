@@ -24,10 +24,15 @@ jobs:
         python -m pip install --upgrade pip
         python generate_domain_regex_from_wildcard.py
 
-    - name: Commit and push domain_regex.json
+    - name: Check if domain_regex.json has changed
+      run: |
+        git status
+        git diff
+
+    - name: Force add domain_regex.json and commit changes
       run: |
         git config --global user.email "github-actions@github.com"
         git config --global user.name "GitHub Actions"
-        git add domain_regex.json
-        git commit -m "Auto-generated domain_regex.json"
+        git add --force domain_regex.json
+        git commit -m "Auto-generated domain_regex.json" || echo "No changes to commit"
         git push
