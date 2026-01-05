@@ -2,6 +2,7 @@ import re
 
 suffix = []   # 精确域名（不含通配符）
 wildcard = [] # 包含通配符的域名
+ignored = []  # 被忽略的域名/IP
 
 # 读取过滤列表
 with open('filter.txt', 'r') as f:
@@ -26,8 +27,9 @@ ignore_patterns = [
 for line in lines:
     line = line.strip()
 
-    # 如果匹配忽略规则，跳过当前行
+    # 检查每一行是否需要被忽略
     if any(pattern.match(line) for pattern in ignore_patterns):
+        ignored.append(line)
         continue
     
     # 精确域名（domain_suffix）
@@ -49,4 +51,8 @@ with open('suffix.txt', 'w') as f:
 with open('wildcard.txt', 'w') as f:
     f.write('\n'.join(wildcard))
 
-print('suffix.txt and wildcard.txt generated successfully!')
+# 保存忽略的域名/IP 到 ignored.txt
+with open('ignored.txt', 'w') as f:
+    f.write('\n'.join(ignored))
+
+print('suffix.txt, wildcard.txt, and ignored.txt generated successfully!')
