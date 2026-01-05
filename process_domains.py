@@ -1,40 +1,35 @@
-import json
 import re
 
 suffix = []   # 精确域名（不含通配符）
 wildcard = [] # 包含通配符的域名
-ignore_ips = [] # 需要忽略的 IP 地址和域名
 
 # 读取过滤列表
 with open('filter.txt', 'r') as f:
     lines = f.readlines()
 
+# 定义忽略规则：四类
+ignore_patterns = [
+    # 第一类：精确 IP 地址
+    re.compile(r'^\|\|(\d{1,3}\.){3}\d{1,3}\^'),
+    
+    # 第二类：正则表达式形式的 IP 地址
+    re.compile(r'^\/\^.*\^\/$'),
+    
+    # 第三类：带通配符的 GIF 文件
+    re.compile(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\.*gif$'),
+    
+    # 第四类：以 @@ 开头的排除规则
+    re.compile(r'^\@\@')
+]
+
 # 提取域名
 for line in lines:
     line = line.strip()
-    
-    # 第一类：IP 地址（仅精确 IP，不处理通配符）
-    if line.startswith('||') and re.match(r'^\|\|(\d{1,3}\.){3}\d{1,3}\^', line):
-        ip = re.sub(r'^\|\|', '', line).strip().replace('^', '')
-        ignore_ips.append(ip)
-        continue
 
-    # 第二类：正则表达式形式的 IP 地址
-    if re.match(r'^\/\^.*\^\/$', line):
-        ignore_ips.append(line)
+    # 如果匹配忽略规则，跳过当前行
+    if any(pattern.match(line) for pattern in ignore_patterns):
         continue
     
-    # 第三类：带通配符的 GIF 文件
-    if re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\.*gif$', line):
-        ignore_ips.append(line)
-        continue
-    
-    # 第四类：以 @@ 开头的域名排除规则
-    if line.startswith('@@'):
-        domain = re.sub(r'^\@\@', '', line).strip().replace('^', '')
-        ignore_ips.append(domain)
-        continue
-
     # 精确域名（domain_suffix）
     if line.startswith('||'):
         domain = re.sub(r'^\|\|', '', line)
@@ -54,8 +49,4 @@ with open('suffix.txt', 'w') as f:
 with open('wildcard.txt', 'w') as f:
     f.write('\n'.join(wildcard))
 
-# 保存忽略的 IP 文件
-with open('ignore_ips.txt', 'w') as f:
-    f.write('\n'.join(ignore_ips))
-
-print('suffix.txt, wildcard.txt, and ignore_ips.txt generated successfully!')
+print('suffix.txt and wildcard.txt generated successfully!')
