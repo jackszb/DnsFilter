@@ -6,21 +6,23 @@ def convert_wildcards_to_regex(domain):
     """
     将域名中的通配符 '*' 转换为正则表达式形式。
     """
-    # 如果域名以 '*' 开头，转换为 ^.*
-    if domain.startswith("*"):
-        domain = "^.*" + domain[1:]
-
-    # 替换域名中间或其他位置的 '*' 为 .*
+    # 替换所有的 '*' 为 '.*'
     domain = re.sub(r"\*", r".*", domain)
-
-    # 处理域名结尾的 *，转换为 (\.[^.]+)* 来匹配任意数量的子域名
+    
+    # 处理以 '*' 开头的域名
+    if domain.startswith(".*"):
+        domain = "^" + domain
+    
+    # 处理以 '*' 结尾的域名，转换为 (\.[^.]+)* 来匹配子域
     if domain.endswith(".*"):
         domain = domain[:-2] + "(\.[^.]+)*$"
-    elif not domain.endswith("$"):
-        domain = domain + "$"
-
-    # 处理域名中可能出现的连续点
+    
+    # 确保没有多余的双点 (..)
     domain = re.sub(r"\.\.", ".", domain)
+    
+    # 确保以 $ 结尾
+    if not domain.endswith("$"):
+        domain += "$"
     
     return domain
 
