@@ -117,7 +117,6 @@ collector-*.luigisbox.com
 collector-*.perimeterx.net
 collector-*.px-cdn.net
 collector-*.px-client.net
-collector-*.px-cloud.net
 collector-*.pxchk.net
 collector-*.tvsquared.com
 collector.xhamster*.
